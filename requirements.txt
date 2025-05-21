@@ -1,0 +1,7 @@
+nibabel
+numpy
+scipy
+scikit-image
+opencv-python
+matplotlib
+SimpleITK  
