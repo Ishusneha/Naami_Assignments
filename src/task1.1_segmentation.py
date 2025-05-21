@@ -37,7 +37,7 @@ def keep_largest_components(mask, num_components=2):
 
 if __name__ == "__main__":
     # Step 1: Load CT scan
-    input_path = "left_knee.nii.gz"
+    input_path = "../left_knee.nii.gz"
     ct_volume, affine, header = load_nii(input_path)
 
     # Step 2: Segment bone
@@ -47,8 +47,8 @@ if __name__ == "__main__":
     final_bone_mask = keep_largest_components(raw_bone_mask, num_components=2)
 
     # Step 4: Save result
-    os.makedirs("masks", exist_ok=True)
-    output_path = "masks/original_mask.nii.gz"
+    os.makedirs("results", exist_ok=True)
+    output_path = "./results/original_mask.nii.gz"
     save_nii(final_bone_mask, affine, header, output_path)
 
     print("Segmentation complete. Mask saved at:", output_path)
