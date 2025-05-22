@@ -94,7 +94,6 @@ python src/task1.4_tibia.py
 - Landmark detection results include coordinates
 
 ## Notes
-
 - Ensure sufficient disk space for processing large medical images
 - Some operations may require significant memory for 3D volumes
 - Results are automatically saved to prevent data loss
