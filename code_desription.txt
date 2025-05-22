@@ -1,0 +1,206 @@
+# Medical Image Analysis Pipeline: Code Implementation Guide
+
+A four-stage pipeline for processing knee CT scans, implementing bone segmentation, mask expansion, randomized contour generation, and tibial landmark detection.
+
+## Stage 1: Initial Bone Segmentation
+
+### Libraries and Dependencies
+The first stage uses several key libraries for medical image processing:
+- `nibabel` for handling NIfTI medical image files
+- `numpy` for numerical array operations
+- `skimage.morphology` and `skimage.measure` for image processing operations
+- `scipy.ndimage` for morphological operations
+
+### Image Loading Function
+The `load_nii()` function loads NIfTI files and extracts three components:
+- Image data array containing voxel intensity values
+- Affine transformation matrix for spatial coordinate mapping
+- Header containing scan metadata and parameters
+
+### Image Saving Function
+The `save_nii()` function saves processed data back to NIfTI format:
+- Converts data to unsigned 8-bit integer format
+- Preserves spatial transformation information
+- Maintains original header metadata for compatibility
+
+### Bone Segmentation Algorithm
+The `segment_bone()` function implements intensity-based segmentation:
+- Applies threshold of 300 Hounsfield Units to identify bone tissue
+- Creates binary mask where values above threshold are marked as bone
+- Removes small objects with fewer than 1000 voxels to eliminate noise
+- Fills small holes within bone regions to create continuous structures
+- Returns cleaned binary mask as unsigned 8-bit array
+
+### Component Selection
+The `keep_largest_components()` function refines the segmentation:
+- Uses connected component labeling to identify separate bone structures
+- Calculates region properties including area for each component
+- Sorts components by size in descending order
+- Retains only the specified number of largest components (typically 2 for femur and tibia)
+- Creates output mask containing only the selected components
+
+### Main Processing Workflow
+The main execution follows this sequence:
+1. Load the input CT scan from specified file path
+2. Apply bone segmentation with 300 HU threshold
+3. Keep only the two largest components (femur and tibia)
+4. Save the final binary mask to results directory
+5. Print confirmation message with output file location
+
+## Stage 2: Systematic Mask Expansion
+
+### Libraries and Configuration
+This stage uses:
+- `SimpleITK` for advanced medical image processing
+- `scipy.ndimage.binary_dilation` for morphological operations
+- Configuration parameters for 2mm and 4mm expansion distances
+
+### Mask Expansion Function
+The `expand_mask()` function performs distance-based expansion:
+- Converts expansion distance from millimeters to voxel units
+- Accounts for different voxel spacing in x, y, and z directions
+- Creates three-dimensional structuring element based on calculated voxel distances
+- Applies binary dilation using the structuring element
+- Returns expanded binary mask
+
+### Spatial Calibration Process
+The expansion algorithm handles coordinate system differences:
+- SimpleITK spacing is provided as (x, y, z) tuple
+- Numpy arrays are indexed as (z, y, x) for medical images
+- Conversion ensures proper mapping between coordinate systems
+- Calculates minimum of 1 voxel expansion in each direction to ensure visible changes
+
+### Structuring Element Creation
+The dilation process uses a three-dimensional kernel:
+- Kernel size is determined by expansion distance in each direction
+- Creates rectangular structuring element with odd dimensions
+- Size formula: (2 * expansion_voxels + 1) for each dimension
+- Ensures symmetric expansion around each voxel
+
+### Validation and Comparison
+The system includes validation checks:
+- Compares voxel counts between original and expanded masks
+- Verifies that different expansion distances produce different results
+- Warns if expansions are identical (indicating potential issues)
+- Calculates difference in voxel counts for quantitative comparison
+
+### Main Processing Workflow
+The main execution performs:
+1. Load CT image and original mask using SimpleITK
+2. Extract voxel spacing information
+3. Perform 2mm expansion and save result
+4. Perform 4mm expansion and save result
+5. Compare results and display statistics
+6. Validate that expansions are appropriately different
+
+## Stage 3: Randomized Contour Generation
+
+### Libraries and Random Seed Configuration
+This stage uses:
+- `scipy.ndimage.distance_transform_edt` for distance calculations
+- `random` module with controlled seeds for reproducibility
+- Configuration for maximum 2mm expansion and multiple random seeds
+
+### Mask Expansion Function
+Reuses the expansion function from Stage 2:
+- Creates maximum expansion boundary for randomization
+- Establishes the allowable region for random boundary variations
+- Maintains consistency with previous expansion methodology
+
+### Distance Transform Calculation
+The randomization process uses Euclidean distance transforms:
+- Calculates distance from each voxel to nearest original bone boundary
+- Uses proper coordinate system conversion for accurate distance measurement
+- Spacing parameter order adjusted for (z, y, x) array indexing
+- Results in distance map with values in millimeters
+
+### Randomized Contour Generation
+The `create_randomized_contour()` function implements probabilistic selection:
+- Identifies expansion zone between original and maximum expanded boundaries
+- Starts with original mask to ensure no shrinkage below baseline
+- Applies vectorized processing for computational efficiency
+- Uses distance-based probability model for boundary selection
+
+### Probability Model Implementation
+The randomization uses a sophisticated probability function:
+- Probability decreases with distance from original boundary
+- Uses power function with exponent 1.5 for realistic distribution
+- Clamps probability values between 0 and 1
+- Ensures points closer to original boundary are more likely to be included
+
+### Validation System
+The `validate_randomized_mask()` function performs comprehensive checks:
+- Verifies original mask is completely contained in randomized result
+- Confirms randomized mask doesn't exceed expansion boundaries
+- Checks that randomized mask is not smaller than original
+- Validates distance constraints using distance transform
+- Reports any violations with detailed error messages
+
+### Main Processing Workflow
+The main execution performs:
+1. Load original mask and create maximum expansion
+2. Generate multiple randomized contours using different seeds
+3. Save each randomized mask with seed identifier
+4. Validate each result against geometric and distance constraints
+5. Report validation results and voxel count statistics
+
+## Stage 4: Tibial Landmark Detection
+
+### Libraries and File Management
+This stage uses:
+- `SimpleITK` for connected component analysis
+- `json` for results output formatting
+- Dictionary-based configuration for multiple mask file paths
+
+### Mask Loading Function
+The `load_mask()` function handles multiple mask types:
+- Loads mask image using SimpleITK
+- Extracts array data and spatial information
+- Returns mask array, spacing, and image object for further processing
+
+### Tibia Identification Algorithm
+The `find_tibia()` function separates bone structures:
+- Applies connected component labeling to identify separate bones
+- Uses SimpleITK's ConnectedComponent filter for robust segmentation
+- Calculates statistical properties for each component
+- Identifies tibia as component with lowest centroid z-coordinate
+- Creates isolated tibia mask for landmark detection
+
+### Landmark Detection Process
+The `find_lowest_points()` function extracts anatomical landmarks:
+- Identifies lowest slice containing tibial bone tissue
+- Extracts bone boundary using binary contour detection
+- Finds leftmost and rightmost points on tibial boundary
+- Converts pixel coordinates to physical measurements using spacing information
+
+### Coordinate System Conversion
+The landmark extraction handles coordinate transformations:
+- Converts from array indices to physical coordinates
+- Applies voxel spacing to calculate real-world distances
+- Maintains anatomical orientation consistency
+- Returns coordinates in millimeter units
+
+### Multi-Mask Analysis
+The system processes multiple mask versions:
+- Analyzes original, expanded, and randomized masks
+- Compares landmark positions across different boundary definitions
+- Stores results in structured format for comparative analysis
+- Maintains consistent coordinate systems across all analyses
+
+### Main Processing Workflow
+The main execution performs:
+1. Load all mask files (original, expanded, randomized versions)
+2. Extract tibia from each mask using component analysis
+3. Identify medial and lateral landmarks on tibial surface
+4. Convert coordinates to physical measurements
+5. Store results in JSON format with clear labeling
+6. Save comprehensive results file for further analysis
+
+## Pipeline Integration
+
+### Data Flow Between Stages
+The four stages create a logical processing sequence:
+- Stage 1 produces clean bone segmentation mask
+- Stage 2 creates expanded versions with different boundary definitions
+- Stage 3 generates randomized variations for uncertainty analysis
+- Stage 4 identifies the medial and lateral lowest points on the tibial surface for all masks

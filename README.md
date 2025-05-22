@@ -82,7 +82,7 @@ python src/task1.4_tibia.py
 
 ## Data Organization
 
-- Input data should be placed in the `src/data/` directory
+- Input data should be placed in the root directory
 - Results will be saved in the `src/results/` directory
 - Each script creates its own subdirectory for outputs
 
