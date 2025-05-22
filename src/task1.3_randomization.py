@@ -7,7 +7,7 @@ import random
 
 # --- CONFIGURATION ---
 CT_PATH = "../left_knee.nii.gz"
-MASK_PATH = "../notebooks/masks/original_mask.nii.gz"
+MASK_PATH = "../src/results/original_mask.nii.gz"
 MAX_EXPANSION_MM = 2.0  # Maximum expansion parameter (2mm)
 RANDOM_SEEDS = [42, 43]  # Generate 2 different random contours
 RESULT_DIR = "results"
@@ -106,12 +106,12 @@ def validate_randomized_mask(original_mask, expanded_mask, randomized_mask, max_
         violations.append(f"Randomized mask exceeds {max_expansion_mm}mm limit (max distance: {max_distance:.2f}mm)")
 
     if not violations:
-        print(f"✅ Validation passed for randomized mask {index}")
+        print(f"   Validation passed for randomized mask {index}")
         print(f"   Original voxels: {np.sum(original_mask)}")
         print(f"   Randomized voxels: {np.sum(randomized_mask)}")
         print(f"   Expanded voxels: {np.sum(expanded_mask)}")
     else:
-        print(f"❌ WARNING: Validation failed for randomized mask {index}:")
+        print(f"  WARNING: Validation failed for randomized mask {index}:")
         for v in violations:
             print(f"   - {v}")
 
